@@ -10,19 +10,20 @@ public class UDPMessage {
     private final boolean RA; // Recursion Available - Server sets this to 1 to indicate that recursion is available.
     private final byte Z; // Reserved - Used by DNSSEC queries. At inception, it was reserved for future use.
     private final byte RCODE; // Response Code - Response code indicating the status of the response.
-    private final int QDOUNT; // Question Count - Number of questions in the Question section.
+    private final int QDCOUNT; // Question Count - Number of questions in the Question section.
     private final int ANCOUNT; // Answer Record Count - Number of records in the Answer section.
     private final int NSCOUNT; // Authority Record Count  - Number of records in the Authority section.
     private final int ARCOUNT; // Additional Record Count  - Number of records in the Additional section.
+    private final UDPQuestion question;
 
-    public UDPMessage (byte[] headerArray){
-        if(headerArray.length < 12){
+    public UDPMessage (byte[] buff){
+        if(buff.length < 12){
             throw new IllegalArgumentException("Invalid header size");
         }
 
-        this.ID = ((headerArray[0] & 0xFF) << 8) | (headerArray[1] & 0xFF);
+        this.ID = ((buff[0] & 0xFF) << 8) | (buff[1] & 0xFF);
 
-        int flags = ((headerArray[2] & 0xFF) << 8) | (headerArray[3] & 0xFF);
+        int flags = ((buff[2] & 0xFF) << 8) | (buff[3] & 0xFF);
 
         this.QR = (byte)((flags & 0x8000) >> 15) == 1;
         this.OPCODE = (byte)((flags & 0x7800) >> 11);
@@ -34,10 +35,12 @@ public class UDPMessage {
         this.RCODE = (byte)((flags & 0x000F));
 
 
-        this.QDOUNT = ((headerArray[4] & 0xFF) << 8) | (headerArray[5] & 0xFF);
-        this.ANCOUNT = ((headerArray[6] & 0xFF) << 8) | (headerArray[7] & 0xFF);
-        this.NSCOUNT = ((headerArray[8] & 0xFF) << 8) | (headerArray[9] & 0xFF);
-        this.ARCOUNT = ((headerArray[10] & 0xFF) << 8) | (headerArray[11] & 0xFF);
+        this.QDCOUNT = ((buff[4] & 0xFF) << 8) | (buff[5] & 0xFF);
+        this.ANCOUNT = ((buff[6] & 0xFF) << 8) | (buff[7] & 0xFF);
+        this.NSCOUNT = ((buff[8] & 0xFF) << 8) | (buff[9] & 0xFF);
+        this.ARCOUNT = ((buff[10] & 0xFF) << 8) | (buff[11] & 0xFF);
+
+        this.question = new UDPQuestion(buff);
     }
 
     public static byte[] createUDPHeader(int id, boolean qr, byte opCode, boolean aa,
@@ -127,8 +130,8 @@ public class UDPMessage {
         return RCODE;
     }
 
-    public int getQDOUNT() {
-        return QDOUNT;
+    public int getQDCOUNT() {
+        return QDCOUNT;
     }
 
     public int getANCOUNT() {
@@ -137,5 +140,70 @@ public class UDPMessage {
 
     public int getARCOUNT() {
         return ARCOUNT;
+    }
+
+    public UDPQuestion getQuestion() {
+        return question;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("DNS Message {\n");
+        sb.append("  Header:\n");
+        sb.append(String.format("    ID: 0x%04X (%d)\n", ID, ID));
+        sb.append(String.format("    Flags: %s %s%s%s%s%s\n",
+                QR ? "qr" : "",
+                AA ? "aa " : "",
+                TC ? "tc " : "",
+                RD ? "rd " : "",
+                RA ? "ra " : "",
+                Z != 0 ? "z " : ""
+        ));
+        sb.append(String.format("    Type: %s\n", QR ? "Response" : "Query"));
+        sb.append(String.format("    Opcode: %s (%d)\n", getOpcodeString(OPCODE), OPCODE));
+        sb.append(String.format("    Response Code: %s (%d)\n", getRcodeString(RCODE), RCODE));
+        sb.append(String.format("    Questions: %d\n", QDCOUNT));
+        sb.append(String.format("    Answers: %d\n", ANCOUNT));
+        sb.append(String.format("    Authority: %d\n", NSCOUNT));
+        sb.append(String.format("    Additional: %d\n", ARCOUNT));
+
+        if (question != null && QDCOUNT > 0) {
+            sb.append("  Question Section:\n");
+            sb.append("    ").append(question.toString()).append("\n");
+        }
+
+        sb.append("}");
+        return sb.toString();
+    }
+
+    // Helper method for OPCODE strings
+    private String getOpcodeString(byte opcode) {
+        return switch (opcode) {
+            case 0 -> "QUERY";
+            case 1 -> "IQUERY";
+            case 2 -> "STATUS";
+            case 4 -> "NOTIFY";
+            case 5 -> "UPDATE";
+            default -> "OPCODE" + opcode;
+        };
+    }
+
+    // Helper method for RCODE strings
+    private String getRcodeString(byte rcode) {
+        return switch (rcode) {
+            case 0 -> "No Error";
+            case 1 -> "Format Error";
+            case 2 -> "Server Failure";
+            case 3 -> "Name Error";
+            case 4 -> "Not Implemented";
+            case 5 -> "Refused";
+            case 6 -> "YXDomain";
+            case 7 -> "YXRRSet";
+            case 8 -> "NXRRSet";
+            case 9 -> "NotAuth";
+            case 10 -> "NotZone";
+            default -> "RCODE" + rcode;
+        };
     }
 }
