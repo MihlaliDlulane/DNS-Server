@@ -6,7 +6,7 @@ import java.nio.charset.StandardCharsets;
 
 public class UDPQuestion {
 
-    private static byte[] createUDPQuestion(String domainName,int type,int questionClass){
+    public static byte[] createUDPQuestion(String domainName,int type,int questionClass){
         if(type < 1 || type > 65535){
             throw new IllegalArgumentException("Invalid question type");
         }

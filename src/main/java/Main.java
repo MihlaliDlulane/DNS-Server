@@ -1,4 +1,5 @@
 import dataTypes.UDPMessage;
+import dataTypes.UDPQuestion;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -19,8 +20,11 @@ public class Main {
                                                             message.isRA(), message.getZ(), message.getRCODE(), message.getANCOUNT(), message.getANCOUNT(),
                                                             message.getNSCOUNT(), message.getARCOUNT());
 
+         byte[] question = UDPQuestion.createUDPQuestion("example.com",1,1);
+
          final byte[] bufResponse = new byte[512];
          System.arraycopy(responseHeader, 0, bufResponse, 0, 12);
+         System.arraycopy(question,0,bufResponse,12,question.length);
          final DatagramPacket packetResponse = new DatagramPacket(bufResponse, bufResponse.length, packet.getSocketAddress());
          serverSocket.send(packetResponse);
        }
