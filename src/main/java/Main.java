@@ -46,6 +46,20 @@ public class Main {
                             rdata          // The IP address
                     );
                     answerCount = 1;
+                } else if(queryType == 28){
+                    byte[] domainName = message.getQuestion().getDomainName();
+
+                    //Create Rdata for a AAA record query
+                    byte[] rdata = RData.createAAAA("2001:0db8:0000:0000:0000:0000:1234:5678");
+
+                    answerSection = UDPAnswer.createAnswer(
+                            domainName,
+                            28, // Type AA
+                            1, //Class In
+                            300, // TTL
+                            rdata //Ipv6 address
+                    );
+                    answerCount = 1;
                 }
 
                 byte[] responseHeader = UDPMessage.createUDPHeader(
